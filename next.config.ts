@@ -3,10 +3,6 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  eslint: {
-    // Lint is run separately in CI; do not block production builds.
-    ignoreDuringBuilds: true,
-  },
   async headers() {
     return [
       {
