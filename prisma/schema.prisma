@@ -1,0 +1,223 @@
+// Multi-tenant EMI device management platform.
+// Scaled for 100k shops / 1M devices via targeted indexes and pagination.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum DeviceStatus {
+  ACTIVE
+  LOCKED
+  WIPED
+  DEACTIVATED
+}
+
+enum EmiFrequency {
+  MONTHLY
+  WEEKLY
+}
+
+enum PlanStatus {
+  ACTIVE
+  COMPLETED
+  DEFAULTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  REVERSED
+}
+
+enum PaymentMode {
+  CASH
+  UPI
+  BANK
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  plan      Plan     @default(FREE)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shops Shop[]
+  users User[]
+}
+
+model Shop {
+  id                String   @id @default(cuid())
+  orgId             String
+  name              String
+  address           String?
+  city              String?
+  state             String?
+  phone             String?
+  isActive          Boolean  @default(true)
+  enrollmentKeyHash String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  org     Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  users   User[]
+  devices Device[]
+
+  @@index([orgId])
+}
+
+model User {
+  id           String    @id @default(cuid())
+  orgId        String
+  shopId       String
+  username     String    @unique
+  email        String?
+  passwordHash String
+  role         Role      @default(STAFF)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  shop Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([shopId])
+}
+
+model Device {
+  id                    String       @id @default(cuid())
+  shopId                String
+  imei1                 String       @unique
+  imei2                 String?
+  brand                 String?
+  model                 String?
+  androidVersion        String?
+  appVersion            String?
+  customerName          String?
+  customerPhone         String?
+  customerAddress       String?
+  isLocked              Boolean      @default(false)
+  lockMessage           String?
+  isSirenActive         Boolean      @default(false)
+  batteryLevel          Int?
+  batteryHealth         String?
+  isCharging            Boolean      @default(false)
+  lastLatitude          Float?
+  lastLongitude         Float?
+  lastLocationAt        DateTime?
+  lastOnlineAt          DateTime?
+  offlineThresholdHours Int          @default(48)
+  deviceTokenHash       String?
+  tokenBoundAt          DateTime?
+  status                DeviceStatus @default(ACTIVE)
+  pendingCommand        String?
+  pendingCommandPayload String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  shop     Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  emiPlan  EmiPlan?
+  payments EmiPayment[]
+
+  @@index([shopId])
+  @@index([status])
+  @@index([shopId, status])
+}
+
+model EmiPlan {
+  id                String       @id @default(cuid())
+  deviceId          String       @unique
+  totalAmount       Float
+  downPayment       Float        @default(0)
+  emiAmount         Float
+  totalInstallments Int
+  frequency         EmiFrequency @default(MONTHLY)
+  startDate         DateTime
+  gracePeriodDays   Int          @default(7)
+  status            PlanStatus   @default(ACTIVE)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  device   Device       @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  payments EmiPayment[]
+}
+
+model EmiPayment {
+  id            String        @id @default(cuid())
+  planId        String
+  deviceId      String
+  installmentNo Int
+  amount        Float
+  dueDate       DateTime
+  paidAt        DateTime?
+  paymentMode   PaymentMode?
+  collectedBy   String?
+  receiptNumber String?
+  status        PaymentStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  plan   EmiPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  device Device  @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId])
+  @@index([planId])
+  @@index([dueDate, status])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  orgId     String
+  shopId    String
+  actorId   String
+  actorName String
+  actorRole String
+  action    String
+  targetType String
+  targetId  String
+  reason    String?
+  metadata  String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([shopId, createdAt])
+  @@index([targetId])
+}
+
+model DeviceActivityLog {
+  id           String   @id @default(cuid())
+  deviceId     String
+  event        String
+  message      String?
+  batteryLevel Int?
+  latitude     Float?
+  longitude    Float?
+  ipAddress    String?
+  metadata     String?
+  createdAt    DateTime @default(now())
+
+  @@index([deviceId, createdAt])
+}
