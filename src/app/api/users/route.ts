@@ -48,11 +48,15 @@ export async function POST(req: NextRequest) {
   })
   if (exists) return Errors.conflict('Username already taken')
 
+  // Derive org from the target shop so SUPER_ADMIN can create users in any org.
+  const shop = await prisma.shop.findUnique({ where: { id: parsed.data.shopId } })
+  if (!shop) return Errors.notFound('Shop')
+
   const passwordHash = await hashPassword(parsed.data.password)
   const user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
       data: {
-        orgId: guard.session.orgId,
+        orgId: shop.orgId,
         shopId: parsed.data.shopId,
         username: parsed.data.username,
         email: parsed.data.email,

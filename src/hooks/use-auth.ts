@@ -9,7 +9,7 @@ export interface CurrentUser {
   id: string
   username: string
   email: string | null
-  role: 'OWNER' | 'MANAGER' | 'STAFF'
+  role: 'SUPER_ADMIN' | 'OWNER' | 'MANAGER' | 'STAFF'
   shopId: string
   shopName: string
 }

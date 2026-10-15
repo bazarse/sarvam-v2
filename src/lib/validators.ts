@@ -11,6 +11,13 @@ export const createShopSchema = z.object({
   city: z.string().max(80).optional(),
   state: z.string().max(80).optional(),
   phone: z.string().max(20).optional(),
+  orgId: z.string().cuid().optional(), // SUPER_ADMIN may target any org
+})
+
+export const createOrgSchema = z.object({
+  name: z.string().min(2).max(120),
+  slug: z.string().min(2).max(60).regex(/^[a-z0-9-]+$/, 'lowercase, digits, hyphens'),
+  plan: z.enum(['FREE', 'PRO', 'ENTERPRISE']).default('FREE'),
 })
 
 export const createUserSchema = z.object({

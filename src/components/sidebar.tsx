@@ -14,6 +14,8 @@ import {
 
 import { cn } from '@/lib/utils'
 import { apiPost } from '@/lib/api-client'
+import { useAuth } from '@/hooks/use-auth'
+import { ShieldAlert } from 'lucide-react'
 
 const LINKS = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -27,6 +29,11 @@ const LINKS = [
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const { user } = useAuth(false)
+  const links =
+    user?.role === 'SUPER_ADMIN'
+      ? [{ href: '/admin', label: 'Platform', icon: ShieldAlert }, ...LINKS]
+      : LINKS
 
   async function logout() {
     await apiPost('/api/auth/logout').catch(() => {})
@@ -39,7 +46,7 @@ export function Sidebar() {
         Sarvam<span className="text-brand-500"> DM</span>
       </div>
       <nav className="flex-1 space-y-1 px-3">
-        {LINKS.map(({ href, label, icon: Icon }) => {
+        {links.map(({ href, label, icon: Icon }) => {
           const active = pathname === href
           return (
             <Link

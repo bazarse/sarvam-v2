@@ -23,7 +23,10 @@ export async function GET(req: NextRequest) {
       skip,
       take,
       orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { devices: true, users: true } } },
+      include: {
+        org: { select: { name: true } },
+        _count: { select: { devices: true, users: true } },
+      },
     }),
     prisma.shop.count({ where }),
   ])
@@ -39,9 +42,17 @@ export async function POST(req: NextRequest) {
   const parsed = createShopSchema.safeParse(body)
   if (!parsed.success) return Errors.badRequest('Invalid shop data')
 
+  // SUPER_ADMIN must name a target org; OWNER is pinned to their own org.
+  const orgId =
+    guard.session.role === 'SUPER_ADMIN'
+      ? parsed.data.orgId
+      : guard.session.orgId
+  if (!orgId) return Errors.badRequest('orgId is required')
+
+  const { orgId: _ignore, ...shopFields } = parsed.data
   const shop = await prisma.$transaction(async (tx) => {
     const created = await tx.shop.create({
-      data: { orgId: guard.session.orgId, ...parsed.data },
+      data: { orgId, ...shopFields },
     })
     await writeAudit(tx, guard.session, {
       action: 'SHOP_CREATED',
