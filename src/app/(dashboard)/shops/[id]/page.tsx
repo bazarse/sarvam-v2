@@ -65,7 +65,9 @@ export default function ShopDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
 
-      {user?.role === 'OWNER' && <NewUserForm shopId={id} onCreated={load} />}
+      {(user?.role === 'OWNER' || user?.role === 'SUPER_ADMIN') && (
+        <NewUserForm shopId={id} onCreated={load} />
+      )}
     </div>
   )
 }

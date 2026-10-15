@@ -1,25 +1,47 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-import { apiPost } from '@/lib/api-client'
+import { apiFetch, apiPost } from '@/lib/api-client'
 
-export function NewShopForm({ onCreated }: { onCreated: () => void }) {
+interface OrgOption {
+  id: string
+  name: string
+}
+
+export function NewShopForm({
+  onCreated,
+  superAdmin = false,
+}: {
+  onCreated: () => void
+  superAdmin?: boolean
+}) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [orgs, setOrgs] = useState<OrgOption[]>([])
+
+  useEffect(() => {
+    if (superAdmin && open) {
+      apiFetch<{ items: OrgOption[] }>('/api/orgs')
+        .then((d) => setOrgs(d.items))
+        .catch(() => setOrgs([]))
+    }
+  }, [superAdmin, open])
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const f = new FormData(e.currentTarget)
     setBusy(true)
     try {
-      await apiPost('/api/shops', {
+      const payload: Record<string, string> = {
         name: String(f.get('name')),
         city: String(f.get('city') || ''),
         state: String(f.get('state') || ''),
         phone: String(f.get('phone') || ''),
         address: String(f.get('address') || ''),
-      })
+      }
+      if (superAdmin) payload.orgId = String(f.get('orgId'))
+      await apiPost('/api/shops', payload)
       ;(e.target as HTMLFormElement).reset()
       setOpen(false)
       onCreated()
@@ -42,9 +64,17 @@ export function NewShopForm({ onCreated }: { onCreated: () => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-xl border border-slate-200 bg-white p-5">
+    <form onSubmit={submit} className="w-full space-y-3 rounded-xl border border-slate-200 bg-white p-5">
       <h2 className="text-sm font-semibold text-slate-900">New Shop</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {superAdmin && (
+          <select name="orgId" required className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm sm:col-span-2">
+            <option value="">Select organization…</option>
+            {orgs.map((o) => (
+              <option key={o.id} value={o.id}>{o.name}</option>
+            ))}
+          </select>
+        )}
         <input name="name" required placeholder="Shop name" className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
         <input name="phone" placeholder="Phone" className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
         <input name="city" placeholder="City" className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />

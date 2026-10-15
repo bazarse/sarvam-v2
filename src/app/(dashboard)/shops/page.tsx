@@ -33,7 +33,9 @@ export default function ShopsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">Shops</h1>
-        {user?.role === 'OWNER' && <NewShopForm onCreated={load} />}
+        {(user?.role === 'OWNER' || user?.role === 'SUPER_ADMIN') && (
+          <NewShopForm onCreated={load} superAdmin={user?.role === 'SUPER_ADMIN'} />
+        )}
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
