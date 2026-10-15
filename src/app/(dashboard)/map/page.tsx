@@ -1,54 +1,40 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 
 import { apiFetch } from '@/lib/api-client'
+import type { MapPoint } from '@/components/live-map'
 
-interface MapDevice {
-  id: string
-  imei1: string
-  customerName: string | null
-  lastLatitude: number | null
-  lastLongitude: number | null
-}
+// Leaflet touches the DOM, so load the map only on the client.
+const LiveMap = dynamic(
+  () => import('@/components/live-map').then((m) => m.LiveMap),
+  { ssr: false, loading: () => <p className="text-sm text-slate-500">Loading map...</p> }
+)
 
-// Placeholder map view. A tile-based map (Leaflet/Mapbox) can be dropped in
-// later; for now we list the latest known coordinates per device.
 export default function MapPage() {
-  const [devices, setDevices] = useState<MapDevice[]>([])
+  const [points, setPoints] = useState<MapPoint[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    apiFetch<{ items: MapDevice[] }>('/api/devices?pageSize=100')
-      .then((d) => setDevices(d.items.filter((x) => x.lastLatitude != null)))
-      .catch(() => setDevices([]))
+    apiFetch<{ items: MapPoint[] }>('/api/devices/locations')
+      .then((d) => setPoints(d.items))
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed'))
   }, [])
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-slate-900">Live Map</h1>
-      <p className="text-sm text-slate-500">
-        Latest known device locations. Map tiles integration coming next.
-      </p>
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {devices.map((d) => (
-          <a
-            key={d.id}
-            href={`https://www.google.com/maps?q=${d.lastLatitude},${d.lastLongitude}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-xl border border-slate-200 bg-white p-4 text-sm hover:border-brand-500"
-          >
-            <p className="font-medium text-slate-900">{d.customerName ?? d.imei1}</p>
-            <p className="text-slate-500">
-              {d.lastLatitude?.toFixed(5)}, {d.lastLongitude?.toFixed(5)}
-            </p>
-            <span className="text-xs text-brand-600">Open in Google Maps →</span>
-          </a>
-        ))}
+      <div className="flex gap-4 text-sm text-slate-600">
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-3 w-3 rounded-full bg-emerald-600" /> Active
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-3 w-3 rounded-full bg-red-600" /> Locked
+        </span>
       </div>
-      {devices.length === 0 && (
-        <p className="text-sm text-slate-500">No location data yet.</p>
-      )}
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <LiveMap points={points} />
     </div>
   )
 }

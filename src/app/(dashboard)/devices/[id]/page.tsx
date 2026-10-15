@@ -6,6 +6,8 @@ import { apiFetch } from '@/lib/api-client'
 import { InfoGrid } from '@/components/info-grid'
 import { DeviceActions } from '@/components/device-actions'
 import { EmiTimeline, type Payment } from '@/components/emi-timeline'
+import { EmiManager } from '@/components/emi-manager'
+import { CustomerForm } from '@/components/customer-form'
 import { StatusBadge } from '@/components/status-badge'
 
 interface DeviceDetail {
@@ -109,6 +111,21 @@ export default function DeviceDetailPage({
         />
       </div>
 
+      <CustomerForm
+        deviceId={device.id}
+        initial={{
+          customerName: device.customerName,
+          customerPhone: device.customerPhone,
+          customerAddress: device.customerAddress,
+        }}
+        onChange={load}
+      />
+      <EmiManager
+        deviceId={device.id}
+        hasPlan={device.payments.length > 0}
+        payments={device.payments}
+        onChange={load}
+      />
       <EmiTimeline payments={device.payments} />
     </div>
   )
