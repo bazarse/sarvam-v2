@@ -4,6 +4,7 @@ import { use, useCallback, useEffect, useState } from 'react'
 
 import { apiFetch } from '@/lib/api-client'
 import { NewUserForm } from '@/components/new-user-form'
+import { EnrollmentPanel } from '@/components/enrollment-panel'
 import { useAuth } from '@/hooks/use-auth'
 
 interface Shop {
@@ -66,7 +67,10 @@ export default function ShopDetailPage({ params }: { params: Promise<{ id: strin
       </div>
 
       {(user?.role === 'OWNER' || user?.role === 'SUPER_ADMIN') && (
-        <NewUserForm shopId={id} onCreated={load} />
+        <>
+          <EnrollmentPanel shopId={id} />
+          <NewUserForm shopId={id} onCreated={load} />
+        </>
       )}
     </div>
   )

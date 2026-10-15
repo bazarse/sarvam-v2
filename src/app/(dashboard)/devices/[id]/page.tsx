@@ -1,8 +1,10 @@
 'use client'
 
 import { use, useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 import { apiFetch } from '@/lib/api-client'
+import { useAuth } from '@/hooks/use-auth'
 import { InfoGrid } from '@/components/info-grid'
 import { DeviceActions } from '@/components/device-actions'
 import { EmiTimeline, type Payment } from '@/components/emi-timeline'
@@ -39,8 +41,20 @@ export default function DeviceDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
+  const router = useRouter()
+  const { user } = useAuth()
   const [device, setDevice] = useState<DeviceDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  async function deleteDevice() {
+    if (!confirm('Delete this device permanently?')) return
+    try {
+      await apiFetch(`/api/devices/${id}`, { method: 'DELETE' })
+      router.push('/devices')
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed')
+    }
+  }
 
   const load = useCallback(() => {
     apiFetch<DeviceDetail>(`/api/devices/${id}`)
@@ -64,7 +78,17 @@ export default function DeviceDetailPage({
           </h1>
           <p className="text-sm text-slate-500">{device.imei1}</p>
         </div>
-        <StatusBadge status={device.status} />
+        <div className="flex items-center gap-3">
+          <StatusBadge status={device.status} />
+          {(user?.role === 'OWNER' || user?.role === 'SUPER_ADMIN') && (
+            <button
+              onClick={deleteDevice}
+              className="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50"
+            >
+              Delete
+            </button>
+          )}
+        </div>
       </div>
 
       <DeviceActions deviceId={device.id} isLocked={device.isLocked} onChange={load} />

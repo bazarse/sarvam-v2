@@ -5,9 +5,18 @@ import { verifyPassword } from '@/lib/auth'
 import { createSessionToken, setSessionCookie } from '@/lib/session'
 import { loginSchema } from '@/lib/validators'
 import { Errors, apiOk } from '@/lib/errors'
+import { rateLimit, sweep } from '@/lib/rate-limit'
+import { clientIp } from '@/lib/utils'
 
 export async function POST(req: NextRequest) {
   try {
+    sweep()
+    const ip = clientIp(req.headers) ?? 'unknown'
+    // Max 10 login attempts per IP per minute.
+    if (!rateLimit(`login:${ip}`, 10, 60_000)) {
+      return Errors.badRequest('Too many attempts. Please wait a minute.')
+    }
+
     const body = await req.json().catch(() => null)
     const parsed = loginSchema.safeParse(body)
     if (!parsed.success) return Errors.badRequest('Invalid credentials format')
