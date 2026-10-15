@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import { apiPost } from '@/lib/api-client'
 
-const APK_URL = 'https://sarvam-tau.vercel.app/sarvam.apk'
+const APK_URL = 'https://sarvam-v2-six.vercel.app/sarvam.apk'
 
 // Generate/rotate the shop enrollment key and show one-time install guidance.
 export function EnrollmentPanel({ shopId }: { shopId: string }) {
